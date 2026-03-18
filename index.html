@@ -5990,6 +5990,7 @@ function renderToday() {
             <div class="hfr-meta" style="font-size:.65rem">🔥${getHabitStreak(h)} дн. ${isDone?'· <span style=\"color:var(--mint)\">Выполнено ✓</span>':''}</div>
             ${buildHabitSparkline(h)}
           </div>
+          <button onclick="event.stopPropagation();openHabitTips(${h.id})" title="Советы и факты" style="flex-shrink:0;width:32px;height:32px;border-radius:10px;background:rgba(77,166,255,.12);border:1px solid rgba(77,166,255,.2);color:var(--blue);font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s" onmouseenter="this.style.background='rgba(77,166,255,.22)'" onmouseleave="this.style.background='rgba(77,166,255,.12)'">💡</button>
           <div class="habit-chk ${isDone?'done':'open'}" style="flex-shrink:0;cursor:pointer"
                onclick="event.stopPropagation();toggleHabit(${h.id},'${todayKey}')">${isDone?'✓':''}</div>
         </div>
@@ -6457,6 +6458,7 @@ function renderHabits() {
           <div class="hfr-meta">${freqLabel(h.freq)} ${streak>0?'· 🔥'+streak+' дн.':''} · ${monthDays} отметок</div>
           ${buildHabitSparkline(h)}
         </div>
+        <button onclick="event.stopPropagation();openHabitTips(${h.id})" title="Советы и факты" style="flex-shrink:0;width:32px;height:32px;border-radius:10px;background:rgba(77,166,255,.12);border:1px solid rgba(77,166,255,.2);color:var(--blue);font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s" onmouseenter="this.style.background='rgba(77,166,255,.22)'" onmouseleave="this.style.background='rgba(77,166,255,.12)'">💡</button>
         <div class="habit-chk ${isDone?'done':'open'}" style="flex-shrink:0;cursor:pointer"
              onclick="event.stopPropagation();toggleHabit(${h.id},'${todayKey}')">${isDone?'✓':''}</div>
       </div>
