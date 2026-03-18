@@ -5913,7 +5913,7 @@ function renderToday() {
   const today = new Date();
   const days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
   document.getElementById('today-date-sub').textContent = days[today.getDay()] + ', ' + today.getDate() + ' ' + MONTHS_RU[today.getMonth()];
-  document.getElementById('today-username').textContent = DB.user.name;
+  document.getElementById('today-username').textContent = parseUserName(DB.user.name).displayName;
   // Sync sidebar avatar & username
   updateAvatar();
   // (sidebar username synced via updateAvatar)
@@ -9850,18 +9850,49 @@ function applyPersonalization() {
 
 
 
-function updateAvatar() {
-  const name     = DB.user.name || 'Профиль';
-  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) || 'НБ';
-  const gradient = DB.user.avatarColor || '#8b5cf6,#4f46e5';
+ /**
+  * Разбирает полное имя пользователя (Фамилия Имя Отчество) и возвращает:
+  *   displayName  — «Имя О.» (полное имя + первая буква отчества с точкой, если есть)
+  *   initials     — «ИО» (первая буква имени + первая буква отчества, если есть; иначе первые 2 буквы имени)
+  * Формат входной строки: «Фамилия Имя Отчество» (3 слова) или «Имя Фамилия» (2 слова) или просто «Имя».
+  */
+ function parseUserName(fullName) {
+   const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+   let firstName = '', patronymic = '';
+   if (parts.length >= 3) {
+     // Фамилия Имя Отчество
+     firstName  = parts[1];
+     patronymic = parts[2];
+   } else if (parts.length === 2) {
+     // Имя Фамилия (без отчества)
+     firstName  = parts[0];
+     patronymic = '';
+   } else {
+     firstName  = parts[0] || '';
+     patronymic = '';
+   }
+   const patronymicLetter = patronymic ? patronymic[0].toUpperCase() : '';
+   const displayName = firstName
+     ? (firstName + (patronymicLetter ? ' ' + patronymicLetter + '.' : ''))
+     : (fullName || 'Профиль');
+   const initials = firstName
+     ? ((firstName[0] || '').toUpperCase() + patronymicLetter).slice(0, 2) || (fullName || 'НБ').slice(0, 2).toUpperCase()
+     : (fullName || 'НБ').slice(0, 2).toUpperCase();
+   return { displayName, initials };
+ }
 
-  // Header pill
-  const ico  = document.getElementById('hdr-avatar-ico');
-  const nm   = document.getElementById('hdr-avatar-name');
-  const lvlEl= document.getElementById('hdr-avatar-lvl');
-  if (ico) { ico.textContent = initials; ico.style.background = `linear-gradient(135deg,${gradient})`; }
-  if (nm)  nm.textContent = name.length > 11 ? name.slice(0,11) + '…' : name;
-  if (lvlEl) {
+ function updateAvatar() {
+   const name     = DB.user.name || 'Профиль';
+   const { displayName, initials } = parseUserName(name);
+   const gradient = DB.user.avatarColor || '#8b5cf6,#4f46e5';
+ 
+   // Header pill
+   const ico  = document.getElementById('hdr-avatar-ico');
+   const nm   = document.getElementById('hdr-avatar-name');
+   const lvlEl= document.getElementById('hdr-avatar-lvl');
+   if (ico) { ico.textContent = initials; ico.style.background = `linear-gradient(135deg,${gradient})`; }
+   if (nm)  nm.textContent = displayName;
+   if (lvlEl) {
     try {
       const xp  = (getAcademyState ? getAcademyState() : { xp:0 }).xp || 0;
       const lvl = xp < 150 ? 'Новичок' : xp < 400 ? 'Осознанный' : xp < 800 ? 'Мастер' : 'Эксперт';
@@ -9870,11 +9901,11 @@ function updateAvatar() {
     } catch(e) {}
   }
 
-  // Legacy compat (desktop sidebar avatar)
-  const sideAv = document.getElementById('bnav-avatar');
-  const sideNm = document.getElementById('bnav-username');
-  if (sideAv) { sideAv.textContent = initials; sideAv.style.background = `linear-gradient(135deg,${gradient})`; }
-  if (sideNm) sideNm.textContent = name;
+   // Legacy compat (desktop sidebar avatar)
+   const sideAv = document.getElementById('bnav-avatar');
+   const sideNm = document.getElementById('bnav-username');
+   if (sideAv) { sideAv.textContent = initials; sideAv.style.background = `linear-gradient(135deg,${gradient})`; }
+   if (sideNm) sideNm.textContent = displayName;
 
   // Notif dot
   const nd = document.getElementById('notif-dot-hdr');
@@ -9934,10 +9965,10 @@ function openProfileSheet() {
   // Goal type
   setSegActive('goal-type-seg', DB.user.goalType || 'save');
   // Avatar
-  const grad = DB.user.avatarColor || '#7c3aed,#4f46e5';
-  const initials = (DB.user.name || 'НБ').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) || 'НБ';
-  const bigAv = document.getElementById('prof-avatar-big');
-  if (bigAv) { bigAv.textContent = initials; bigAv.style.background = 'linear-gradient(135deg,' + grad + ')'; }
+   const grad = DB.user.avatarColor || '#7c3aed,#4f46e5';
+   const { initials: profInitials } = parseUserName(DB.user.name || 'НБ');
+   const bigAv = document.getElementById('prof-avatar-big');
+   if (bigAv) { bigAv.textContent = profInitials; bigAv.style.background = 'linear-gradient(135deg,' + grad + ')'; }
   document.querySelectorAll('#sheet-profile .avatar-swatch').forEach(sw => {
     sw.classList.toggle('active', sw.dataset.grad === grad);
   });
@@ -10427,14 +10458,14 @@ function openProfile() {
   const providerLabel = !auth ? 'Гость' : auth.provider === 'local' ? 'Email' : ({yandex:'Яндекс',vk:'VK',gosuslugi:'Госуслуги',max:'MAX'}[auth.provider] || auth.provider);
   const providerIcon  = !auth ? '👤' : auth.provider === 'local' ? '✉️' : ({yandex:'🟠',vk:'💙',gosuslugi:'🏛️',max:'💬'}[auth.provider] || '🔗');
   const memberSince   = auth?.createdAt ? new Date(auth.createdAt).toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'}) : 'Сегодня';
-  const initials = (DB.user.name||'НБ').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  const grad = (DB.user.avatarColor||'#667eea,#764ba2').split(',').join(',');
-
-  document.getElementById('profile-content').innerHTML = `
-    <!-- Avatar + name -->
-    <div style="text-align:center;padding:10px 0 20px">
-      <div style="width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,${grad});display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:1.5rem;font-weight:800;margin:0 auto 12px;border:3px solid rgba(255,255,255,.1)">${initials}</div>
-      <div style="font-family:var(--font-head);font-size:1.2rem;font-weight:800">${DB.user.name||'Пользователь'}</div>
+   const { initials: cardInitials, displayName: cardDisplayName } = parseUserName(DB.user.name || 'НБ');
+   const grad = (DB.user.avatarColor||'#667eea,#764ba2').split(',').join(',');
+ 
+   document.getElementById('profile-content').innerHTML = `
+     <!-- Avatar + name -->
+     <div style="text-align:center;padding:10px 0 20px">
+       <div style="width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,${grad});display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:1.5rem;font-weight:800;margin:0 auto 12px;border:3px solid rgba(255,255,255,.1)">${cardInitials}</div>
+       <div style="font-family:var(--font-head);font-size:1.2rem;font-weight:800">${cardDisplayName||DB.user.name||'Пользователь'}</div>
       ${(auth && auth.email ? '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + auth.email + '</div>' : '')}
       <div style="font-size:.72rem;color:var(--gold);margin-top:4px">${lv.badge} ${lv.name} · ${acSt.totalXP} XP</div>
     </div>
